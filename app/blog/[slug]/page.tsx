@@ -1,18 +1,35 @@
-type Params = {
-    params: {
-        slug: string;
-    };
-};
+// app/blog/[slug]/page.tsx
+import { use } from "react";
+import { Metadata } from "next";
 
-export async function generateMetadata({ params }: Params) {
-    return { title: `Post: ${params.slug}` };
+interface PageProps {
+    params: Promise<{ slug: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default function Page({ params }: Params) {
+// Main page component using React's use() hook
+export default function BlogPost({ params, searchParams }: PageProps) {
+    // Use the use() hook to unwrap the promises
+    const { slug } = use(params);
+    const resolvedSearchParams = use(searchParams);
+
+    // Your existing blog post logic here
     return (
-        <>
-            <h1>Slug: {params.slug}</h1>
-            <p>Write github actions for ci/cd</p>
-        </>
+        <div>
+            <h1>Blog Post: {slug}</h1>
+            {/* Your blog content */}
+        </div>
     );
+}
+
+// generateMetadata still needs to be async
+export async function generateMetadata({
+    params,
+}: PageProps): Promise<Metadata> {
+    const { slug } = await params;
+
+    return {
+        title: `Blog Post - ${slug}`,
+        description: `Read about ${slug}`,
+    };
 }
