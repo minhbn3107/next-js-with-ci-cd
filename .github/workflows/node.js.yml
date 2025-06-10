@@ -11,22 +11,43 @@ on:
 
 jobs:
   build:
-
     runs-on: self-hosted
+    timeout-minutes: 30
 
     strategy:
       matrix:
         node-version: [18.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
     - uses: actions/checkout@v4
+    
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: npm ci
-    - run: npm run build --if-present
-    - run: npm test
-    - run: pm2 start "npm run start" --name github-action
+    
+    - name: Clean npm cache
+      run: npm cache clean --force
+    
+    - name: Install dependencies with retry
+      uses: nick-fields/retry@v2
+      with:
+        timeout_minutes: 15
+        max_attempts: 3
+        command: npm ci --prefer-offline --no-audit --no-fund --loglevel error
+    
+    - name: Build project
+      run: npm run build --if-present
+      timeout-minutes: 10
+    
+    - name: Run tests
+      run: npm test
+      timeout-minutes: 10
+    
+    - name: Stop existing PM2 processes
+      run: pm2 delete github-action || true
+      continue-on-error: true
+    
+    - name: Start application with PM2
+      run: pm2 start "npm run start" --name github-action
